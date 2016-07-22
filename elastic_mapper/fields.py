@@ -1,8 +1,8 @@
-import six
 import collections
-import copy
-import inspect
 
+import six
+
+from elastic_mapper import repr_utils
 
 
 def get_attribute(obj, attr):
@@ -12,68 +12,126 @@ def get_attribute(obj, attr):
         return getattr(obj, attr)
 
 
+NOT_SOURCE_AND_METHOD_MESSAGE = 'May not set both `source` and `method` attributes simultaneously'
+WRONG_OPTION_TYPE_MESSAGE = ('Parameter `{param}` for field of type `{field_class}` '
+                             'should be a `{type}`.')
+WRONG_OPTION_CHOICE_MESSAGE = ('Parameter `{param}` for field of type `{field_class}` '
+                               'should be one of {choices}.')
+
+
 class Field(object):
     __counter = 0
+    options = {}
 
-    def __init__(self, source=None):
+    def __new__(cls, *args, **kwargs):
+        """
+        """
+        instance = super(Field, cls).__new__(cls)
+        instance._args = args
+        instance._kwargs = kwargs
+        return instance
+
+    def __init__(self, source=None, method=None, **kwargs):
         self.__class__.__counter += 1
+
+        assert not (source and method), NOT_SOURCE_AND_METHOD_MESSAGE
+
         self.source = source
+        self.method = method
         # field_name and mapper will be set from the mapper
         # by calling the `bind` method
         self.field_name = None
         self.mapper = None
 
+        self._validate_field_params(**self._kwargs)
+
+    def _validate_field_params(self, **params):
+        self.params = {}
+        for kw, value in params.items():
+            if kw in self.options:
+                _type = self.options[kw][0]
+                assert isinstance(value, _type), (
+                    WRONG_OPTION_TYPE_MESSAGE.format(param=kw,
+                                                     field_class=self.__class__.__name__,
+                                                     type=_type)
+                )
+                if len(self.options[kw]) == 2:
+                    _type, choices = self.options[kw]
+                    assert value in choices, (
+                        WRONG_OPTION_CHOICE_MESSAGE.format(param=kw,
+                                                           field_class=self.__class__.__name__,
+                                                           type=_type,
+                                                           choices=choices)
+                    )
+                self.params[kw] = value
+
     def bind(self, field_name, mapper):
-        assert self.source != field_name, (
+        assert self.method or self.source != field_name, (
             "Remove the redundant `source='%s'` keyword argument "
             "in mapper '%s' as it matches the field name '%s'." %
             (self.source, mapper.__class__.__name__, field_name)
         )
-    	self.field_name = field_name
-    	self.mapper = mapper
 
-    	if not self.source:
-    	    self.source = self.field_name
+        self.field_name = field_name
+        self.mapper = mapper
+
+        if not self.source and not self.method:
+            self.source = self.field_name
 
     def get_attribute(self, instance):
-    	if self.source.startswith('mapper__'):
-    	    # obtain attribute from a mapper method
-    	    method_name = self.source.replace('mapper__', '')
-    	    method = getattr(self.mapper, method_name)
-    	    return method(instance)
+        if self.method:
+            # obtain attribute from a mapper method
+            method = getattr(self.mapper, self.method)
+            return method(instance)
 
-    	# obtain attribute from instance using the given source
+        # obtain attribute from instance using the given source
         return get_attribute(instance, self.source)
 
     def to_representation(self, value):
         raise NotImplementedError("A Field must implement the to_representation method")
 
+    @property
     def mapping_data(self):
-	raise NotImplementedError("A Field must implement the mapping_data method")    	
+        raise NotImplementedError("A Field must implement the mapping_data method")
+
+    def __repr__(self):
+        return repr_utils.field_repr(self)
 
 
 class StringField(Field):
+    options = {
+        'index': (str, ('analyzed', 'not_analyzed', 'no')),
+    }
 
     def to_representation(self, value):
         return six.text_type(value)
 
+    @property
     def mapping_data(self):
-    	# TODO: parse options
-    	mapping = {
-    	    'type': 'string',
-    	}
-    	return mapping
+        mapping = {
+            'type': 'string',
+        }
+        mapping.update(self.params)
+        return mapping
 
 
+class NumericField(Field):
+    options = {
+        'index': (str, ('not_analyzed', 'no')),
+        'precision_step': (int, ),
+    }
 
-class IntegerField(Field):
+    @property
+    def mapping_data(self):
+        mapping = {
+            'type': self.mapping_type,  # must be overridden by subclasses
+        }
+        mapping.update(self.params)
+        return mapping
+
+
+class IntegerField(NumericField):
+    mapping_type = 'integer'
 
     def to_representation(self, value):
         return int(value)
-
-    def mapping_data(self):
-    	# TODO: parse options
-    	mapping = {
-    	    'type': 'integer',
-    	}
-    	return mapping

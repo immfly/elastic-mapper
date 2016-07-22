@@ -1,9 +1,11 @@
-import six
-import collections
 import copy
-import inspect
 
-from elastic_mapper.fields import *  # noqa # isort:skip
+import six
+
+from elastic_mapper import repr_utils
+from elastic_mapper.loggers import global_logger
+
+from elastic_mapper.fields import get_attribute, Field, StringField, IntegerField  # noqa # isort:skip
 
 
 class MapperMetaclass(type):
@@ -29,20 +31,19 @@ class MapperMetaclass(type):
 class Mapper(Field):
 
     def __init__(self, instance=None, *args, **kwargs):
-    	self.instance = instance
-    	super(Mapper, self).__init__(*args, **kwargs)
+        self.instance = instance
+        super(Mapper, self).__init__(*args, **kwargs)
 
     @property
     def fields(self):
         """
-        A dictionary of {field_name: field_instance}.
         """
         if not hasattr(self, '_fields'):
-    	    self._fields = {}
+            self._fields = {}
             for field_name, field in self.copied_fields().items():
                 field.bind(field_name, self)
                 self._fields[field_name] = field
-        
+
         return self._fields.values()
 
     def copied_fields(self):
@@ -59,36 +60,47 @@ class Mapper(Field):
 
         # dynamic data
         attrs = getattr(instance, '__dict__', instance)
+        if not attrs:
+            return ret
         for attr, value in attrs.iteritems():
             # TODO: recursively assert type correctness
-            skip_attrs = (f.field_name if (not f.source or f.source.startswith('mapper__')) else f.source
-            	          for f in self.fields)
+            skip_attrs = (f.field_name
+                          if (not f.source or f.source.startswith('mapper__'))
+                          else f.source
+                          for f in self.fields)
             if attr not in skip_attrs:
-            	ret[attr] = get_attribute(instance, attr)
+                ret[attr] = get_attribute(instance, attr)
 
         return ret
 
     @property
-    def data(self):
+    def mapped_data(self):
         """
         Object instance -> Dict of primitive datatypes.
         """
         return self.to_representation(self.instance)
 
-    def store(self):
-    	"Sends the mapped data to the configured backends"
-    	# TODO: send data to backends
-    	pass
+    def export(self):
+        "Sends the mapped data to the configured export backends"
+        global_logger.info('export', self)
 
+    @property
     def mapping_data(self):
-    	# TODO: parse options
-    	mapping = {}
-    	return mapping
+        mapping = {
+            'type': 'object',
+            'properties': {},
+        }
+        for field in self.fields:
+            mapping['properties'][field.field_name] = field.mapping_data
+        return mapping
 
     @classmethod
-    def mapping(cls):
-    	mapping = {}
-    	for attr_name, field in cls._declared_fields.iteritems():
-    	    mapping[attr_name] = field.mapping_data()
+    def generate_mapping(cls):
+        mapping = {}
+        for attr_name, field in cls._declared_fields.iteritems():
+            mapping[attr_name] = field.mapping_data
 
-    	return mapping
+        return mapping
+
+    def __repr__(self):
+        return repr_utils.mapper_repr(self)
