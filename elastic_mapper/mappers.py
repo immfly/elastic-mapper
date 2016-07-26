@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import copy
 
 import six
@@ -5,7 +6,13 @@ import six
 from elastic_mapper import repr_utils
 from elastic_mapper.loggers import global_logger
 
-from elastic_mapper.fields import get_attribute, Field, StringField, IntegerField  # noqa # isort:skip
+from elastic_mapper.fields import (
+    get_attribute,  # noqa # isort:skip
+    Field,  # noqa # isort:skip
+    StringField,  # noqa # isort:skip
+    IntegerField,  # noqa # isort:skip
+    DateField,  #  noqa # isort:skip
+)
 
 
 class MapperMetaclass(type):
@@ -73,16 +80,20 @@ class Mapper(Field):
 
         return ret
 
+    def export(self):
+        "Sends the mapped data to the configured export backends"
+        global_logger.info('export', self)
+
+    @property
+    def index(self):
+        return self.template.parse_index(self)
+
     @property
     def mapped_data(self):
         """
         Object instance -> Dict of primitive datatypes.
         """
         return self.to_representation(self.instance)
-
-    def export(self):
-        "Sends the mapped data to the configured export backends"
-        global_logger.info('export', self)
 
     @property
     def mapping_data(self):
@@ -96,10 +107,15 @@ class Mapper(Field):
 
     @classmethod
     def generate_mapping(cls):
-        mapping = {}
+        properties = {}
         for attr_name, field in cls._declared_fields.iteritems():
-            mapping[attr_name] = field.mapping_data
+            properties[attr_name] = field.mapping_data
 
+        mapping = {
+            cls.typename: {
+                'properties': properties,
+            }
+        }
         return mapping
 
     def __repr__(self):

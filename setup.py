@@ -9,7 +9,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'elasticmapper = elastic_mapper.cli.elasticmapper:elasticmapper',
+            'elasticmapper = elastic_mapper.cli.elasticmapper:cli',
         ],
     },
     extras_require={

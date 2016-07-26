@@ -25,7 +25,7 @@ class Template(object):
     @classmethod
     def generate_template(cls):
         data = collections.OrderedDict()
-        data['template'] = cls.template
+        data['template'] = cls.index
         settings = cls._get_meta_settings()
         if settings:
             data['settings'] = collections.OrderedDict()
@@ -41,6 +41,11 @@ class Template(object):
 
         return data
 
+    @classmethod
+    def parse_index(cls, mapper):
+        if mapper:
+            return cls.parser.parse(cls.index, mapper)
+
 
 def register(typename, template_cls):
 
@@ -52,6 +57,7 @@ def register(typename, template_cls):
                                               sanitized=sanitized)
             warnings.warn(msg, SyntaxWarning)
         template_cls.types[sanitized] = cls
+        cls.typename = sanitized
         cls.template = template_cls
         return cls
 

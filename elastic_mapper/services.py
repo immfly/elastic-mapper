@@ -29,7 +29,6 @@ class ServiceMetaclass(type):
                 raise AttributeError(msg)
 
             def wrapper(*args, **kwargs):
-                print('called with %r and %r. mapper_cls: %r' % (args, kwargs, mapper_cls))
                 mapper = mapper_cls(*args, **kwargs)
                 mapper.export()
             return wrapper

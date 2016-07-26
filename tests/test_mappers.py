@@ -34,7 +34,6 @@ class TestMapper(object):
             test_attr_with_source = mappers.StringField(source='test_attr')
 
         representation = repr(TestMapper())
-        print representation
         result = ("TestMapper():\n"
                   "    test_attr_with_source = StringField(source='test_attr')")
         assert representation == result
@@ -162,7 +161,7 @@ class TestTemplate(object):
     def test_template_types(self):
         class TestTemplate(templates.Template):
             name = "test_template"
-            template = "test-*"
+            index = "test-*"
 
         @templates.register('test_type', TestTemplate)
         class TestMapper(mappers.Mapper):
@@ -177,7 +176,7 @@ class TestTemplate(object):
     def test_template_settings(self):
         class TestTemplate(templates.Template):
             name = "test_template"
-            template = "test-*"
+            index = "test-*"
 
             class Meta:
                 number_of_shards = 1
@@ -224,7 +223,7 @@ class TestService(object):
     def mapper_args(self):
         class TestTemplate(templates.Template):
             name = "test_template"
-            template = "test-*"
+            index = "test-*"
 
             class Meta:
                 number_of_shards = 1
@@ -256,7 +255,7 @@ class TestService(object):
     def test_service_invalid_typename(self):
         class TestTemplate(templates.Template):
             name = "test_template"
-            template = "test-*"
+            index = "test-*"
 
             class Meta:
                 number_of_shards = 1

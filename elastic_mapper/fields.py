@@ -1,6 +1,7 @@
+from __future__ import unicode_literals
 import collections
-
 import six
+import datetime
 
 from elastic_mapper import repr_utils
 
@@ -135,3 +136,35 @@ class IntegerField(NumericField):
 
     def to_representation(self, value):
         return int(value)
+
+
+class DateField(Field):
+    options = {
+        'format': (str, ),
+        'index': (str, ('not_analyzed', 'no')),
+    }
+
+    def __init__(self, **kwargs):
+        self.auto_now = kwargs.pop('auto_now', False)
+        self.strftime = kwargs.pop('strftime', '%Y-%m-%dT%H:%M:%S%z')
+        super(DateField, self).__init__(**kwargs)
+
+    def get_attribute(self, instance):
+        if self.auto_now:
+            # user current datetime as default
+            now = datetime.datetime.now()
+            return now
+
+        # obtain datetime from source
+        return super(DateField, self).get_attribute(instance)
+
+    def to_representation(self, value):
+        return value.strftime(self.strftime)
+
+    @property
+    def mapping_data(self):
+        mapping = {
+            'type': 'string',
+        }
+        mapping.update(self.params)
+        return mapping
