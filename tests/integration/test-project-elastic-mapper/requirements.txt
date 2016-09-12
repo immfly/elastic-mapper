@@ -1,0 +1,2 @@
+elasticsearch==2.3.0
+-e git+git@github.com:immfly/elastic-mapper.git@353f69cf55cda81991455fed8e61bbcab0fbb3fe#egg=elasticmapper-master
