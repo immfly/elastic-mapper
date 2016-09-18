@@ -13,6 +13,6 @@ setup(
         ],
     },
     extras_require={
-        'cli':  ["Click"],
+        'cli':  ["Click", "pygments"],
     }
 )
