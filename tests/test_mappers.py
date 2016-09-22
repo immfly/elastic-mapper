@@ -171,7 +171,9 @@ class TestTemplate(object):
         assert data['template'] == 'test-*'
         assert 'settings' not in data
         assert 'test_type' in data['mappings']
-        assert data['mappings']['test_type'] == {'test_attr': {'type': 'string'}}
+        import pprint
+        pprint.pprint(data)
+        assert data['mappings']['test_type']['properties'] == {'test_attr': {'type': 'string'}}
 
     def test_template_settings(self):
         class TestTemplate(templates.Template):

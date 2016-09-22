@@ -35,7 +35,7 @@ class Template(object):
         if cls.types:
             data['mappings'] = collections.OrderedDict()
             for typename, mapper_cls in cls.types.items():
-                data['mappings'][typename] = mapper_cls.generate_mapping()
+                data['mappings'] = mapper_cls.generate_mapping()
         # TODO: aliases
         # data['aliases'] = collections.OrderedDict()
 

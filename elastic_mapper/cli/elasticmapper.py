@@ -1,11 +1,14 @@
 import json
 import os
 from pygments import highlight, lexers, formatters
+from tabulate import tabulate
+from termcolor import colored
 from elasticsearch import Elasticsearch
 
 import click
 
 import loaders, differs
+from differs import State
 
 
 MAPPING_COLOR = "cyan"
@@ -74,6 +77,37 @@ def get_matching_indexes(key, mappings):
     return matches
 
 
+def print_mapping_state(typename, states):
+    table = []
+    symbols = {
+        State.ok: 'green',
+        State.extra_field: 'blue',
+        State.extra_param: 'blue',
+        State.missing_field: 'yellow',
+        State.missing_param: 'yellow',
+        State.type_conflict: 'red',
+        State.param_conflict: 'red',
+
+    }
+    color_weights = {
+        'green': 0,
+        'blue': 1,
+        'yellow': 2,
+        'red': 3,
+    }
+    weight = 0
+    for fieldname, state in states.iteritems():
+        color = symbols[state.state]
+        weight = max(weight, color_weights[color])
+        table.append([colored(fieldname, color, attrs=['bold',]),
+                      colored(state.name, color),
+                      state.description])
+
+    title_color = {v: k for k, v in color_weights.iteritems()}[weight]
+    print(colored("%s:" % typename, title_color, attrs=['bold',]))
+    headers = ['Field', 'Issue', 'Description']
+    print tabulate(table, headers, tablefmt='fancy_grid')
+
 @cli.command()
 @click.option('--path',
               default=os.getcwd(),
@@ -100,11 +134,13 @@ def diff(path, show_mappings, show_templates):
             matches = get_matching_indexes(mapping.template.index, es_mappings)
             for match in matches:
                 print "***********"
+                print "mapper mapping:"
                 pprint.pprint(mapping.generate_mapping())
+                print "ES mapping:"
                 pprint.pprint(es_mappings[match]['mappings'])
                 differ = differs.MappingDiffer(name,
                                                mapping.generate_mapping(),
                                                es_mappings[match]['mappings'])
-                # diff = DeepDiff(mapping.generate_mapping(), es_mappings[match]['mappings'], ignore_order=True)
-                # pprint.pprint(diff)
-                # import ipdb; ipdb.set_trace()
+                states = differ.diff()
+                print_mapping_state(name, states)
+

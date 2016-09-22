@@ -1,6 +1,7 @@
 from deepdiff import DeepDiff
 import pprint
 from enum import Enum
+import collections
 
 import re
 
@@ -17,14 +18,48 @@ class State(Enum):
 
 class MappingState(object):
 
+    def __init__(self, fieldname, state=State.ok):
+        self.fieldname = fieldname
+        self.state = state
+
+    def __repr__(self):
+        return "%s (%s)" % (self.fieldname, self.state.name)
+
+
+    @property
+    def name(self):
+        return 'OK'
+
+    @property
+    def description(self):
+        return ''
+
+
+class MappingIssue(MappingState):
+    texts = {
+        State.extra_field: ('Dynamic Field', 'Field indexed in ES but not declared in the mapper'),
+        State.extra_param: ('Extra Param', 'Parameter defined in ES but not declared in the mapper'),
+        State.missing_field: ('Missing Field', 'Field declared in the mapper but not exported to ES yet'),
+        State.missing_param: ('Missing Param', 'Some parameter is declared in the mapper but not exported to ES yet'),
+        State.type_conflict: ('Type Conflict', 'Field indexed as `{source_type}` but declared as `{dest_type}`'),
+        State.param_conflict: ('Param Conflict', 'Parameter defined differently in ES and the mapper'),
+    }
+
     def __init__(self, issue_type, diff, change=None):
         self.diff = diff
         self.chain = self._parse_chain(diff)
         self.change = change
-        self.type = self._parse_type(issue_type)
+        self.fieldname = self._parse_fieldname(self.chain)
+        self._set_state(issue_type)
 
-    def __repr__(self):
-        return "%s: %s" % (self.type.name, self.chain)
+    @property
+    def name(self):
+        return self.texts[self.state][0]
+
+    @property
+    def description(self):
+        text = self.texts[self.state][1]
+        return text.format(**self.__dict__)
 
     def _parse_chain(self, diff):
         pattern = re.compile(r"(?<=\[)(.*?)(?=\])")
@@ -33,22 +68,27 @@ class MappingState(object):
         print "channel %s -> %s" % (diff, matches)
         return matches
 
-    def _parse_type(self, issue_type):
+    def _parse_fieldname(self, chain):
+        return '.'.join(chain[::2])
+
+    def _set_state(self, issue_type):
         if issue_type == 'added':
             if len(self.chain) % 2 == 0: # param
-                return State.extra_param
+                self.state = State.extra_param
             else: # field
-                return State.extra_field
+                self.state = State.extra_field
         elif issue_type == 'removed':
             if len(self.chain) % 2 == 0: # param
-                return State.missing_param
+                self.state = State.missing_param
             else: # field
-                return State.missing_field
+                self.state = State.missing_field
         else: # 'changed'
             if self.chain[-1] == 'type':
-                return State.type_conflict
+                self.state = State.type_conflict
+                self.source_type = self.change['new_value']
+                self.dest_type = self.change['old_value']
             elif len(self.chain) % 2 == 0: # param:
-                return State.param_conflict
+                self.state = State.param_conflict
             else:
                 raise Exception("Unknown mapping state")
 
@@ -66,27 +106,48 @@ class MappingDiffer(object):
         diff = DeepDiff(self.source,
                         self.dest,
                         ignore_order=True)
+
+        states = collections.OrderedDict()
+        fieldnames = [f for f in self._gen_mapping_fieldnames(self.source)]
+        for fieldname in sorted(fieldnames):
+            states[fieldname] = MappingState(fieldname)
+
         print "%s:\n\n" % self.typename
         pprint.pprint(diff)
-        states = []
         for chain in diff['dic_item_added']:
             # fields -> dynamic fields (fields present in ES but not in the mapper)
             # params -> params present in ES but not in the mapper
-            states.append(MappingState('added', chain))
+            issue = MappingIssue('added', chain)
+            states[issue.fieldname] = issue
 
         for chain in diff['dic_item_removed']:
             # fields -> new fields added to the mapper, no data with the new field sent to ES yet
             # params -> params newly added or declared in mapper but not sent to ES yet
-            states.append(MappingState('removed', chain))
+            issue = MappingIssue('removed', chain)
+            if issue.fieldname in fieldnames:
+                states[issue.fieldname] = issue
 
         for chain, change in diff['values_changed'].items():
             # type -> type conflicts (one type declared in mapper while a different one exists in ES)
             # params -> params modified in mapper but not sent to ES yet
-            states.append(MappingState('changed', chain, change))
+            issue = MappingIssue('changed', chain, change)
+            if issue.fieldname in fieldnames:
+                states[issue.fieldname] = issue
 
-        print("****")
-        for state in states:
-            print(state)
+        return states
+
+    def _gen_mapping_fieldnames(self, mapping, prefix=''):
+        fieldnames = []
+        for fieldname, attrs in mapping.iteritems():
+            if 'properties' in attrs.keys():
+                # nested object
+                new_prefix = (prefix + '.') if prefix else ''
+                nested_fieldnames = self._gen_mapping_fieldnames(attrs['properties'], new_prefix + fieldname)
+                for nf in nested_fieldnames:
+                    fieldnames.append(nf)
+            else:
+                fieldnames.append(prefix + '.' + fieldname)
+        return fieldnames
 
     def _parse_chain(self, chain):
         pattern = re.compile(r"(?<=\[)(.*?)(?=\])")

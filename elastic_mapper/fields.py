@@ -164,7 +164,7 @@ class DateField(Field):
     @property
     def mapping_data(self):
         mapping = {
-            'type': 'string',
+            'type': 'date',
         }
         mapping.update(self.params)
         return mapping
