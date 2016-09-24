@@ -7,7 +7,8 @@ from elasticsearch import Elasticsearch
 
 import click
 
-import loaders, differs
+import loaders
+import differs
 from differs import State
 
 
@@ -67,7 +68,6 @@ def get_matching_indexes(key, mappings):
     for match in matches:
         key = key.replace('{' + match + '}', "\\w")
 
-
     repl = re.compile(key)
     matches = []
     for key in mappings.keys():
@@ -99,14 +99,15 @@ def print_mapping_state(typename, states):
     for fieldname, state in states.iteritems():
         color = symbols[state.state]
         weight = max(weight, color_weights[color])
-        table.append([colored(fieldname, color, attrs=['bold',]),
+        table.append([colored(fieldname, color, attrs=['bold', ]),
                       colored(state.name, color),
                       state.description])
 
     title_color = {v: k for k, v in color_weights.iteritems()}[weight]
-    print(colored("%s:" % typename, title_color, attrs=['bold',]))
+    print(colored("%s:" % typename, title_color, attrs=['bold', ]))
     headers = ['Field', 'Issue', 'Description']
     print tabulate(table, headers, tablefmt='fancy_grid')
+
 
 @cli.command()
 @click.option('--path',
@@ -117,7 +118,6 @@ def print_mapping_state(typename, states):
 @click.option('--templates', 'show_templates', is_flag=True, default=False,
               help='Show template data from project')
 def diff(path, show_mappings, show_templates):
-    from deepdiff import DeepDiff
     import pprint
     path = os.path.abspath(path)
     loader = loaders.ProjectMappingLoader(path)
@@ -143,4 +143,3 @@ def diff(path, show_mappings, show_templates):
                                                es_mappings[match]['mappings'])
                 states = differ.diff()
                 print_mapping_state(name, states)
-

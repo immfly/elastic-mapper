@@ -1,4 +1,3 @@
-import pytest
 from . import BaseESTest, es_host
 
 
@@ -12,7 +11,7 @@ class TestExport(BaseESTest):
         }
         mapper = TestStringMapper(test_args)
         mapper.export()
-        
+
         # 2. assert mappings
         es_mappings = es_host.indices.get_mapping(index=mapper.index)
         assert mapper.index in es_mappings.keys()

@@ -8,7 +8,7 @@ import re
 
 class State(Enum):
     ok = 1
-    extra_field = 2 # dynamic field
+    extra_field = 2  # dynamic field
     extra_param = 3
     missing_field = 4
     missing_param = 5
@@ -25,7 +25,6 @@ class MappingState(object):
     def __repr__(self):
         return "%s (%s)" % (self.fieldname, self.state.name)
 
-
     @property
     def name(self):
         return 'OK'
@@ -38,11 +37,16 @@ class MappingState(object):
 class MappingIssue(MappingState):
     texts = {
         State.extra_field: ('Dynamic Field', 'Field indexed in ES but not declared in the mapper'),
-        State.extra_param: ('Extra Param', 'Parameter defined in ES but not declared in the mapper'),
-        State.missing_field: ('Missing Field', 'Field declared in the mapper but not exported to ES yet'),
-        State.missing_param: ('Missing Param', 'Some parameter is declared in the mapper but not exported to ES yet'),
-        State.type_conflict: ('Type Conflict', 'Field indexed as `{source_type}` but declared as `{dest_type}`'),
-        State.param_conflict: ('Param Conflict', 'Parameter defined differently in ES and the mapper'),
+        State.extra_param: ('Extra Param', ('Parameter defined in ES but not declared in '
+                                            'the mapper')),
+        State.missing_field: ('Missing Field', ('Field declared in the mapper but not exported '
+                                                'to ES yet')),
+        State.missing_param: ('Missing Param', ('Some parameter is declared in the mapper but not '
+                                                'exported to ES yet')),
+        State.type_conflict: ('Type Conflict', ('Field indexed as `{source_type}` but declared '
+                                                'as `{dest_type}`')),
+        State.param_conflict: ('Param Conflict', ('Parameter defined differently in ES and '
+                                                  'the mapper')),
     }
 
     def __init__(self, issue_type, diff, change=None):
@@ -73,21 +77,21 @@ class MappingIssue(MappingState):
 
     def _set_state(self, issue_type):
         if issue_type == 'added':
-            if len(self.chain) % 2 == 0: # param
+            if len(self.chain) % 2 == 0:  # param
                 self.state = State.extra_param
-            else: # field
+            else:  # field
                 self.state = State.extra_field
         elif issue_type == 'removed':
-            if len(self.chain) % 2 == 0: # param
+            if len(self.chain) % 2 == 0:  # param
                 self.state = State.missing_param
-            else: # field
+            else:  # field
                 self.state = State.missing_field
-        else: # 'changed'
+        else:  # 'changed'
             if self.chain[-1] == 'type':
                 self.state = State.type_conflict
                 self.source_type = self.change['new_value']
                 self.dest_type = self.change['old_value']
-            elif len(self.chain) % 2 == 0: # param:
+            elif len(self.chain) % 2 == 0:  # param:
                 self.state = State.param_conflict
             else:
                 raise Exception("Unknown mapping state")
@@ -128,7 +132,7 @@ class MappingDiffer(object):
                 states[issue.fieldname] = issue
 
         for chain, change in diff['values_changed'].items():
-            # type -> type conflicts (one type declared in mapper while a different one exists in ES)
+            # type -> type conflicts (a type declared in mapper while a different one exists in ES)
             # params -> params modified in mapper but not sent to ES yet
             issue = MappingIssue('changed', chain, change)
             if issue.fieldname in fieldnames:
@@ -142,7 +146,8 @@ class MappingDiffer(object):
             if 'properties' in attrs.keys():
                 # nested object
                 new_prefix = (prefix + '.') if prefix else ''
-                nested_fieldnames = self._gen_mapping_fieldnames(attrs['properties'], new_prefix + fieldname)
+                nested_fieldnames = self._gen_mapping_fieldnames(attrs['properties'],
+                                                                 new_prefix + fieldname)
                 for nf in nested_fieldnames:
                     fieldnames.append(nf)
             else:

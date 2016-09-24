@@ -6,12 +6,12 @@ import six
 from elastic_mapper import repr_utils
 from elastic_mapper.loggers import global_logger
 
-from elastic_mapper.fields import (
-    get_attribute,  # noqa # isort:skip
-    Field,  # noqa # isort:skip
-    StringField,  # noqa # isort:skip
-    IntegerField,  # noqa # isort:skip
-    DateField,  #  noqa # isort:skip
+from elastic_mapper.fields import (  # flake8: noqa # isort:skip
+    get_attribute,  
+    Field,
+    StringField,
+    IntegerField,
+    DateField,
 )
 
 
