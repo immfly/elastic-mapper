@@ -120,6 +120,7 @@ class NumericField(Field):
     options = {
         'index': (str, ('not_analyzed', 'no')),
         'precision_step': (int, ),
+        'boost': (float, ),
     }
 
     @property

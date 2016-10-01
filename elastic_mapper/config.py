@@ -20,3 +20,6 @@ class Config(object):
     def add_export_backend(self, backend_cls, *args, **kwargs):
         backend = backend_cls(*args, **kwargs)
         self.export_backends.append(backend)
+
+    def reset_export_backends(self):
+        self.export_backends = []

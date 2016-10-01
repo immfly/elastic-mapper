@@ -96,12 +96,16 @@ def print_mapping_state(typename, states):
         'red': 3,
     }
     weight = 0
-    for fieldname, state in states.iteritems():
-        color = symbols[state.state]
-        weight = max(weight, color_weights[color])
-        table.append([colored(fieldname, color, attrs=['bold', ]),
-                      colored(state.name, color),
-                      state.description])
+    # TODO: reorganize this after accepting lists of issues
+    # http://stackoverflow.com/questions/30419488/python-tabulate-format-want-to-display-the-table-with-one-blank-element
+    # TODO: remove superfluous issues (e.g. when a type conflict exists with other minor conflicts)
+    for fieldname, state_list in states.iteritems():
+        for state in state_list:
+            color = symbols[state.state]
+            weight = max(weight, color_weights[color])
+            table.append([colored(fieldname, color, attrs=['bold', ]),
+                          colored(state.name, color),
+                          state.description])
 
     title_color = {v: k for k, v in color_weights.iteritems()}[weight]
     print(colored("%s:" % typename, title_color, attrs=['bold', ]))

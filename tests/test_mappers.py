@@ -158,6 +158,9 @@ class TestIntegerField(object):
 
 class TestTemplate(object):
 
+    def setup_method(self, method):
+        templates.Template.types = dict()
+
     def test_template_types(self):
         class TestTemplate(templates.Template):
             name = "test_template"
@@ -171,8 +174,6 @@ class TestTemplate(object):
         assert data['template'] == 'test-*'
         assert 'settings' not in data
         assert 'test_type' in data['mappings']
-        import pprint
-        pprint.pprint(data)
         assert data['mappings']['test_type']['properties'] == {'test_attr': {'type': 'string'}}
 
     def test_template_settings(self):

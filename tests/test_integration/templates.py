@@ -8,10 +8,7 @@ class TestStringTemplate(elastic_templates.Template):
     parser = parsers.MonthlyParser()
 
 
-# class TestTemplateApp1(elastic_templates.Template):
-#     name = "test_template_app1"
-#     index = "test-app1-{time}"
-#     parser = parsers.MonthlyParser()
-
-#     class Meta:
-#         number_of_shards = 1
+class TestIntTemplate(elastic_templates.Template):
+    name = "test_template_int"
+    index = "test-int-{time}"
+    parser = parsers.MonthlyParser()
