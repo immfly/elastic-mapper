@@ -14,5 +14,6 @@ class BaseESTest(object):
 
     def setup_method(self, method):
         conf = config.Config()
+        conf.reset_export_backends()
         conf.add_export_backend(TestElasticSearchBackend)
         es_host.indices.delete('test*')
