@@ -76,7 +76,6 @@ class MappingIssue(MappingState):
         pattern = re.compile(r"(?<=\[)(.*?)(?=\])")
         matches = pattern.findall(diff)
         matches = [m.replace("'", "") for m in matches]
-        print "channel %s -> %s" % (diff, matches)
         return matches
 
     def _parse_fieldname(self, chain):
@@ -147,9 +146,6 @@ class MappingDiffer(object):
         for fieldname in sorted(fieldnames):
             states[fieldname] = []
 
-        print "%s:\n\n" % self.typename
-        import pprint
-        pprint.pprint(diff)
         for chain in diff.get('dictionary_item_added', []):
             # fields -> dynamic fields (fields present in ES but not in the mapper)
             # params -> params present in ES but not in the mapper
@@ -181,7 +177,8 @@ class MappingDiffer(object):
         """
         normalized = collections.OrderedDict()
         for fieldname, state_list in states.items():
-            norm_fieldname = fieldname.split('.', 1)[1]
+            # norm_fieldname = fieldname.split('.', 1)[1]
+            norm_fieldname = fieldname
             # in case some state is `type_conflict`, we remove the other issues for that field
             # since they will be irrelevant when having a type conflict
             conflicts = [s for s in state_list if s.state == State.type_conflict]
@@ -200,14 +197,14 @@ class MappingDiffer(object):
 
     def _gen_mapping_fieldnames(self, mapping, prefix=''):
         fieldnames = []
+        new_prefix = (prefix + '.') if prefix else ''
         for fieldname, attrs in mapping.iteritems():
             if 'properties' in attrs.keys():
                 # nested object
-                new_prefix = (prefix + '.') if prefix else ''
                 nested_fieldnames = self._gen_mapping_fieldnames(attrs['properties'],
                                                                  new_prefix + fieldname)
                 for nf in nested_fieldnames:
                     fieldnames.append(nf)
             else:
-                fieldnames.append(prefix + '.' + fieldname)
+                fieldnames.append(new_prefix + fieldname)
         return fieldnames

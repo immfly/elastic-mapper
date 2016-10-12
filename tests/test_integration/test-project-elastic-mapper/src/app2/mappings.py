@@ -15,3 +15,9 @@ class TestMapperApp2(mappers.Mapper):
 
     def get_test_method_field(self, obj):
         return "test method value"
+
+
+@elastic_templates.register('test_type_app3', TestTemplateApp2)
+class TestMapperApp3(mappers.Mapper):
+    date_field_third = mappers.DateField(auto_now=True)
+    string_field_third = mappers.StringField(index='not_analyzed')

@@ -12,14 +12,10 @@ from . import BaseESTest, es_host
 class TestDiff(BaseESTest):
 
     def _diff(self, mapper):
-        es_mapping = es_host.indices.get_mapping(index=mapper.index)[mapper.index]['mappings']
-        # declared = mapper.generate_mapping()
-        # import pprint
-        # pprint.pprint(es_mapping)
-        # pprint.pprint(declared)
+        es_mapping = es_host.indices.get_mapping(index=mapper.index)[mapper.index]
         differ = differs.MappingDiffer(mapper.typename,
-                                       mapper.generate_mapping(),
-                                       es_mapping)
+                                       mapper.generate_mapping()[mapper.typename]['properties'],
+                                       es_mapping['mappings'][mapper.typename]['properties'])
         states = differ.diff()
         return states
 
