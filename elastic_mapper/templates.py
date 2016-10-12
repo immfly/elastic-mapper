@@ -12,10 +12,11 @@ INVALID_TYPENAME_MSG = (
 
 class Template(object):
     types = dict()
+    version = 1  # use index versioning by default
 
     @classmethod
-    def _get_meta_settings(self):
-        meta = getattr(self, 'Meta', None)
+    def _get_meta_settings(cls):
+        meta = getattr(cls, 'Meta', None)
         if not meta:
             return ()
         meta_attrs = inspect.getmembers(meta, lambda a: not(inspect.isroutine(a)))
@@ -44,7 +45,11 @@ class Template(object):
     @classmethod
     def parse_index(cls, mapper):
         if mapper:
-            return cls.parser.parse(cls.index, mapper)
+            index = cls.parser.parse(cls.index, mapper)
+            if cls.version:
+                index = "%s-v%d" % (index, cls.version)
+            return index
+
 
 
 def register(typename, template_cls):
