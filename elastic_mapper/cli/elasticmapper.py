@@ -198,3 +198,54 @@ def diff(path, show_mappings, show_templates):
                 # missing_types = local_types.difference(es_types)
                 # extra_types = es_types.difference(local_types)
                 # TODO: test conflicts with fields with same name in different types
+
+
+@cli.command()
+@click.option('--path',
+              default=os.getcwd(),
+              help='Path to the project with Mappers.')
+@click.option('--mappings', 'sync_mappings', is_flag=True, default=False,
+              help='Put mapping data from project')
+@click.option('--templates', 'sync_templates', is_flag=True, default=False,
+              help='Put template data from project')
+@click.option('--yes', 'skip_confirmation', is_flag=True, default=False,
+              help="Don't prompt for confirmation when pushing to Elasticsearch")
+@click.option('--dry', 'dry_run', is_flag=True, default=False,
+              help="Show the steps to be performed without actually running them")
+def sync(path, sync_mappings, sync_templates, skip_confirmation, dry_run):
+    path = os.path.abspath(path)
+    loader = loaders.ProjectMappingLoader(path)
+
+    if sync_mappings:
+        raise NotImplementedError(colored("Mapping sync is not supported yet", 'red'))
+
+    if sync_templates:
+        if not loader.get_templates():
+            print(colored("No templates found in ", 'red', attrs=['bold', ]) +
+                  colored(path, 'red'))
+            return
+
+        templates = collections.defaultdict(list)
+        for name, mapper in loader.mappings.items():
+            templates[mapper.template].append(mapper)
+
+        click.echo("Detected templates:")
+        for template, mappers in templates.iteritems():
+            click.echo("   - %s (%s)" % (template.name, template.parse_index_template()))
+            for mapper in mappers:
+                click.echo("      - %s" % (mapper.typename))
+
+        if not skip_confirmation:
+            click.confirm("Are you sure you want to put the project templates into Elasticsearch?",
+                          abort=True)
+        for name, template in loader.get_templates().items():
+            click.echo("Putting template %s..." % name)
+            if not dry_run:
+                es.indices.put_template(name, template)
+            exists = es.indices.exists_template(name)
+            if exists or dry_run:
+                click.secho("Successfully added template %s to Elasticsearch" % name,
+                            fg='green')
+            else:
+                click.secho("Error adding template %s to Elasticsearch" % name,
+                            fg='red')
