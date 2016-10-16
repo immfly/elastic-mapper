@@ -88,6 +88,7 @@ def print_mapping_state(typename, states):
         State.missing_param: 'yellow',
         State.type_conflict: 'red',
         State.param_conflict: 'red',
+        State.inconsistent_field: 'red',
 
     }
     color_weights = {
@@ -112,6 +113,26 @@ def print_mapping_state(typename, states):
     print(colored("%s:" % typename, title_color, attrs=['bold', ]))
     headers = ['Field', 'Issue', 'Description']
     print tabulate(table, headers, tablefmt='fancy_grid')
+
+
+def print_template_state(template, states):
+    print("Template " +
+          colored(template.name, attrs=['bold', ]) +
+          " (%s):\n" % template.parse_index_template())
+
+    for issue in states.template_states:
+        if issue.state == State.template_extra_type:
+            print(colored("Type ", 'blue') +
+                  colored("%s" % issue.typename, 'blue', attrs=['bold', ]) +
+                  colored(" not exported to ES yet", 'blue'))
+        if issue.state == State.template_missing_type:
+            print(colored("Type ", 'yellow') +
+                  colored("%s" % issue.typename, 'yellow', attrs=['bold', ]) +
+                  colored(" added to Elasticsearch but not defined in the temmplate", 'yellow'))
+
+    for typename, issues in states.type_states.iteritems():
+        print("\n")
+        print_mapping_state(typename, issues)
 
 
 @cli.command()
@@ -179,21 +200,21 @@ def diff(path, show_mappings, show_templates):
                 print(highlight(unicode(data, 'UTF-8'),
                                 lexers.JsonLexer(),
                                 formatters.TerminalFormatter()))
-                local_types = set(template['mappings'].keys())
-                es_types = set(es_template[name]['mappings'].keys())
-                common_types = local_types.intersection(es_types)
-                print("Template " +
-                      colored(name, attrs=['bold', ]) +
-                      " (%s):\n" % loader.templates[name].parse_index_template())
-                for common_type in common_types:
-                    local_mapping = template['mappings'][common_type]['properties']
-                    es_mapping = es_template[name]['mappings'][common_type]['properties']
-                    differ = differs.MappingDiffer(common_type,
-                                                   local_mapping,
-                                                   es_mapping)
-                    states = differ.diff()
-                    print_mapping_state(common_type, states)
-                    print('\n')
+                differ = differs.TemplateDiffer(name,
+                                                template['mappings'],
+                                                es_template[name]['mappings'])
+                states = differ.diff()
+                print_template_state(loader.templates[name], states)
+                # for common_type in common_types:
+                #     local_mapping = template['mappings'][common_type]['properties']
+                #     es_mapping = es_template[name]['mappings'][common_type]['properties']
+                #     differ = differs.MappingDiffer(common_type,
+                #                                    local_mapping,
+                #                                    es_mapping)
+                #     states = differ.diff()
+                #     print_mapping_state(common_type, states)
+                #     print('\n')
+
                 # TODO: test missing and extra types
                 # missing_types = local_types.difference(es_types)
                 # extra_types = es_types.difference(local_types)

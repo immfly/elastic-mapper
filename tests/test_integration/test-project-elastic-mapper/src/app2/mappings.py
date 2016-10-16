@@ -21,3 +21,10 @@ class TestMapperApp2(mappers.Mapper):
 class TestMapperApp3(mappers.Mapper):
     date_field_third = mappers.DateField(auto_now=True)
     string_field_third = mappers.StringField(index='not_analyzed')
+    # int_field = mappers.IntegerField()  # inconsistent field
+
+
+# @elastic_templates.register('test_type_app4', TestTemplateApp2)
+# class TestMapperApp4(mappers.Mapper):
+#     date_field_fourth = mappers.DateField(auto_now=True)
+#     int_field_fourth = mappers.IntegerField()

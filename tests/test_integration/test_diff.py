@@ -1,3 +1,5 @@
+import pytest
+import elasticsearch
 from elastic_mapper import mappers
 from elastic_mapper import templates as elastic_templates
 from elastic_mapper.cli import differs
@@ -9,7 +11,7 @@ from templates import TestStringTemplate
 from . import BaseESTest, es_host
 
 
-class TestDiff(BaseESTest):
+class TestMappingDiff(BaseESTest):
 
     def _diff(self, mapper):
         es_mapping = es_host.indices.get_mapping(index=mapper.index)[mapper.index]
@@ -74,6 +76,7 @@ class TestDiff(BaseESTest):
         _, states = self._export_and_diff(TestStringMapper, test_args)
         assert len(states) == 1
         assert ('string_field') in states.keys()
+        print states
         assert states['string_field'][0].state == State.missing_param
         assert states['string_field'][0].param_name == 'index'
         assert states['string_field'][0].param_value == 'not_analyzed'
@@ -181,3 +184,87 @@ class TestDiff(BaseESTest):
         assert conflict.param_name == 'index'
         assert conflict.source_param == 'not_analyzed'
         assert conflict.dest_param == 'analyzed'
+
+
+class TestTemplateDiff(BaseESTest):
+
+    def _diff(self, template_cls):
+        es_template = es_host.indices.get_template(template_cls.name)
+        differ = differs.TemplateDiffer(template_cls.name,
+                                        template_cls.generate_template()['mappings'],
+                                        es_template[template_cls.name]['mappings'])
+        states = differ.diff()
+        return states
+
+    def _create_template(self, template_cls):
+        "Puts a template into ES"
+        es_host.indices.put_template(template_cls.name, template_cls.generate_template())
+
+    def test_ok(self):
+        self._create_template(TestStringTemplate)
+
+        result = self._diff(TestStringTemplate)
+        assert result.type_states['test_type_string']['string_field'][0].state == State.ok
+
+    def test_template_missing_type(self):
+        # store initial template register
+        original_types = TestStringTemplate.types.copy()
+
+        # (temporary) add a new type into the register
+        @elastic_templates.register('test_missing_type', TestStringTemplate)
+        class TestMissingTypeMapper(mappers.Mapper):
+            new_field = mappers.IntegerField()
+
+        # put the template with the new type into ES
+        self._create_template(TestStringTemplate)
+
+        # restore original type register for comparison
+        TestStringTemplate.types = original_types
+
+        # perform the diff to check the missing type
+        result = self._diff(TestStringTemplate)
+        assert len(result.template_states) == 1
+        missing_state = result.template_states[0]
+        assert missing_state.state == State.template_missing_type
+        assert missing_state.typename == 'test_missing_type'
+        assert 'test_missing_type' in missing_state.description
+
+    def test_template_extra_type(self):
+        self._create_template(TestStringTemplate)
+
+        # define the same mapper with a new field (as if the mapper had been updated)
+        @elastic_templates.register('test_extra_type', TestStringTemplate)
+        class TestExtraTypeMapper(mappers.Mapper):
+            new_field = mappers.IntegerField()
+
+        result = self._diff(TestStringTemplate)
+        assert len(result.template_states) == 1
+        extra_state = result.template_states[0]
+        assert extra_state.state == State.template_extra_type
+        assert extra_state.typename == 'test_extra_type'
+        assert 'test_extra_type' in extra_state.description
+
+    def test_template_inconsistent_types(self):
+        # define a new mapper with a field with same name but different types
+        @elastic_templates.register('test_type_inconsistent', TestStringTemplate)
+        class TestInconsistentTypeMapper(mappers.Mapper):
+            string_field = mappers.IntegerField()  # inconsistent: same name but different type
+
+        result = self._diff(TestStringTemplate)
+        print result
+        # check that the inconsistend field conflict is detected for the first mapper
+        assert 'test_type_string' in result.type_states
+        assert 'string_field' in result.type_states['test_type_string']
+        assert len(result.type_states['test_type_string']['string_field']) == 1
+        assert result.type_states['test_type_string']['string_field'][0].state == State.inconsistent_field  # noqa
+
+        # check that the inconsistend field conflict is detected for the second mapper
+        assert 'test_type_inconsistent' in result.type_states
+        assert 'string_field' in result.type_states['test_type_inconsistent']
+        assert len(result.type_states['test_type_inconsistent']['string_field']) == 1
+        assert result.type_states['test_type_inconsistent']['string_field'][0].state == State.inconsistent_field  # noqa
+
+        # check that putting the template into ES returns an error due to the inconsistency
+        with pytest.raises(elasticsearch.exceptions.RequestError) as excinfo:
+            self._create_template(TestStringTemplate)
+        assert 'string_field' in str(excinfo.value)

@@ -22,7 +22,5 @@ class TestExport(BaseESTest):
         # 3. assert data is actually exported
         es_host.indices.refresh(index=mapper.index)
         data = es_host.search(index=mapper.index)
-        import pprint
-        pprint.pprint(data)
         assert data['hits']['total'] == 1
         assert data['hits']['hits'][0]['_source']['string_field'] == 'value'

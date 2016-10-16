@@ -10,6 +10,8 @@ from elastic_mapper.fields import (  # flake8: noqa # isort:skip
     get_attribute,  
     Field,
     StringField,
+    KeywordField,
+    TextField,
     IntegerField,
     DateField,
 )
