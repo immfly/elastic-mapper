@@ -12,3 +12,9 @@ class TestIntTemplate(elastic_templates.Template):
     name = "test_template_int"
     index = "test-int-{time}"
     parser = parsers.MonthlyParser()
+
+
+class TestDateTemplate(elastic_templates.Template):
+    name = "test_template_date"
+    index = "test-date-{time}"
+    parser = parsers.DailyParser(time_field='timestamp')
