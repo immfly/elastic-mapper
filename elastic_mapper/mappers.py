@@ -7,12 +7,12 @@ from elastic_mapper import repr_utils
 from elastic_mapper.loggers import global_logger
 
 from elastic_mapper.fields import (  # flake8: noqa # isort:skip
-    get_attribute,  
+    get_attribute,
     Field,
     StringField,
-    KeywordField,
-    TextField,
+    BooleanField,
     IntegerField,
+    FloatField,
     DateField,
 )
 
