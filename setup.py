@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='elasticmapper',
     version='0.1',
-    py_modules=['elastic_mapper'],
+    packages=['elastic_mapper'],
     install_requires=[
         'six',
     ],
@@ -13,6 +13,6 @@ setup(
         ],
     },
     extras_require={
-        'cli':  ["Click", "pygments"],
+        'cli': ["Click", "pygments"],
     }
 )
