@@ -60,11 +60,15 @@ class Mapper(Field):
 
     def to_representation(self, instance):
         ret = dict()
+        print "to repr"
 
         # mapped data
         for field in self.fields:
+            print field
             attribute = field.get_attribute(instance)
+            print attribute
             val = field.to_representation(attribute)
+            print val
             ret[field.field_name] = val
 
         # dynamic data
