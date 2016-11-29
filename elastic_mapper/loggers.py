@@ -19,6 +19,7 @@ class ElasticMapperHandler(logging.Handler, object):
             try:
                 backend.export(mapper)
             except Exception as e:
+                print e
                 logger.exception(e)
 
 
