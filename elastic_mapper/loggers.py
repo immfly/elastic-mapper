@@ -8,9 +8,12 @@ class ElasticMapperHandler(logging.Handler, object):
     """
 
     def emit(self, record):
+        print "emit"
+        print record
         conf = config.Config()
         mapper = record.args[0]
         for backend in conf.export_backends:
+            print backend
             backend.export(mapper)
 
 
