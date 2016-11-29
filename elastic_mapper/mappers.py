@@ -68,10 +68,12 @@ class Mapper(Field):
             ret[field.field_name] = val
 
         # dynamic data
+        print "dynamic data"
         attrs = getattr(instance, '__dict__', instance)
         if not attrs:
             return ret
         for attr, value in attrs.iteritems():
+            print attr, value
             # TODO: recursively assert type correctness
             skip_attrs = (f.field_name
                           if (not f.source or f.source.startswith('mapper__'))
