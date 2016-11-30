@@ -3,6 +3,9 @@ import logging
 from elastic_mapper import config
 
 
+logger = logging.getLogger(__name__)
+
+
 class ElasticMapperHandler(logging.Handler, object):
     """
     """
@@ -11,7 +14,10 @@ class ElasticMapperHandler(logging.Handler, object):
         conf = config.Config()
         mapper = record.args[0]
         for backend in conf.export_backends:
-            backend.export(mapper)
+            try:
+                backend.export(mapper)
+            except Exception as e:
+                logger.exception(e)
 
 
 global_logger = logging.getLogger('elastic_mapper.global_logger')

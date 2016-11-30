@@ -17,10 +17,17 @@ from elastic_mapper.fields import (  # flake8: noqa # isort:skip
 )
 
 
+class MapperOptions(object):
+
+    def __init__(self, dynamic_fields):
+        self.dynamic_fields = dynamic_fields
+
+
 class MapperMetaclass(type):
 
     @classmethod
     def _get_fields(cls, bases, attrs):
+        # store fields
         fields = [(field_name, attrs.pop(field_name))
                   for field_name, obj in list(attrs.items())
                   if isinstance(obj, Field)]
@@ -32,8 +39,21 @@ class MapperMetaclass(type):
         return dict(fields)
 
     def __new__(cls, name, bases, attrs):
+        # add declared fields to class
         attrs['_declared_fields'] = cls._get_fields(bases, attrs)
         return super(MapperMetaclass, cls).__new__(cls, name, bases, attrs)
+
+    def __init__(cls, name, bases, attrs):
+        # set _meta options
+        dynamic_fields = ()
+        meta = getattr(cls, 'Meta', None)
+        if meta:
+            # override defaults from SyncController's Meta
+            dynamic_fields = getattr(meta, 'dynamic_fields', dynamic_fields)
+
+        # create _meta attribute containing the Mapper's options
+        options = MapperOptions(dynamic_fields=dynamic_fields)
+        setattr(cls, '_meta', options)
 
 
 @six.add_metaclass(MapperMetaclass)
@@ -63,15 +83,21 @@ class Mapper(Field):
 
         # mapped data
         for field in self.fields:
-            attribute = field.get_attribute(instance)
-            val = field.to_representation(attribute)
-            ret[field.field_name] = val
+            value = field.get_attribute(instance)
+            if value is not None:
+                value = field.to_representation(value)
+            ret[field.field_name] = value
 
         # dynamic data
         attrs = getattr(instance, '__dict__', instance)
         if not attrs:
             return ret
+
         for attr, value in attrs.iteritems():
+            if not(self._meta.dynamic_fields == '__all__' or attr in self._meta.dynamic_fields):
+                # skip when this attribute is not allowed to be dynamic
+                continue
+
             # TODO: recursively assert type correctness
             skip_attrs = (f.field_name
                           if (not f.source or f.source.startswith('mapper__'))
