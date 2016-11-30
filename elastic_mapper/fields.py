@@ -116,6 +116,23 @@ class StringField(Field):
         return mapping
 
 
+class BooleanField(Field):
+    options = {
+        'index': (str, ('not_analyzed', 'no')),
+    }
+
+    def to_representation(self, value):
+        return bool(value)
+
+    @property
+    def mapping_data(self):
+        mapping = {
+            'type': 'boolean',
+        }
+        mapping.update(self.params)
+        return mapping
+
+
 class NumericField(Field):
     options = {
         'index': (str, ('not_analyzed', 'no')),
@@ -137,6 +154,13 @@ class IntegerField(NumericField):
 
     def to_representation(self, value):
         return int(value)
+
+
+class FloatField(NumericField):
+    mapping_type = 'float'
+
+    def to_representation(self, value):
+        return float(value)
 
 
 class DateField(Field):
