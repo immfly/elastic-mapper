@@ -22,6 +22,7 @@ class ElasticMapperHandler(logging.Handler, object):
 
 global_logger = logging.getLogger('elastic_mapper.global_logger')
 global_logger.setLevel(logging.INFO)
+global_logger.propagate = False
 
 handler = ElasticMapperHandler()
 global_logger.addHandler(handler)
