@@ -7,6 +7,7 @@ from termcolor import colored
 from elasticsearch import Elasticsearch
 
 import click
+import six
 
 import loaders
 import differs
@@ -48,7 +49,7 @@ def show(path, show_mappings, show_templates):
         for name, mapping in mappings.items():
             click.secho("%s:" % name, fg=MAPPING_COLOR)
             data = json.dumps(mapping, indent=4)
-            print(highlight(unicode(data, 'UTF-8'),
+            print(highlight(six.text_type(data),
                             lexers.JsonLexer(),
                             formatters.TerminalFormatter()))
 
@@ -58,7 +59,7 @@ def show(path, show_mappings, show_templates):
         for name, template in templates.items():
             click.secho("%s:" % name, fg=TEMPLATE_COLOR)
             data = json.dumps(template, indent=4)
-            print(highlight(unicode(data, 'UTF-8'),
+            print(highlight(six.text_type(data),
                             lexers.JsonLexer(),
                             formatters.TerminalFormatter()))
 
@@ -86,7 +87,7 @@ def print_mapping_state(typename, states):
     # TODO: reorganize this after accepting lists of issues
     # http://stackoverflow.com/questions/30419488/python-tabulate-format-want-to-display-the-table-with-one-blank-element
     # TODO: remove superfluous issues (e.g. when a type conflict exists with other minor conflicts)
-    for fieldname, state_list in states.iteritems():
+    for fieldname, state_list in six.iteritems(states):
         for state in state_list:
             color = symbols[state.state]
             weight = max(weight, color_weights[color])
@@ -94,10 +95,10 @@ def print_mapping_state(typename, states):
                           colored(state.name, color),
                           state.description])
 
-    title_color = {v: k for k, v in color_weights.iteritems()}[weight]
+    title_color = {v: k for k, v in six.iteritems(color_weights)}[weight]
     print(colored("%s:" % typename, title_color, attrs=['bold', ]))
     headers = ['Field', 'Issue', 'Description']
-    print tabulate(table, headers, tablefmt='fancy_grid')
+    print(tabulate(table, headers, tablefmt='fancy_grid'))
 
 
 def print_template_state(template, states):
@@ -115,7 +116,7 @@ def print_template_state(template, states):
                   colored("%s" % issue.typename, 'yellow', attrs=['bold', ]) +
                   colored(" added to Elasticsearch but not defined in the temmplate", 'yellow'))
 
-    for typename, issues in states.type_states.iteritems():
+    for typename, issues in six.iteritems(states.type_states):
         print("\n")
         print_mapping_state(typename, issues)
 
@@ -136,15 +137,13 @@ def diff(path, show_mappings, show_templates):
     if show_mappings:
         es_mappings = es.indices.get_mapping(index='*')
         data = json.dumps(es_mappings, indent=4)
-        print(highlight(unicode(data, 'UTF-8'),
-              lexers.JsonLexer(),
-              formatters.TerminalFormatter()))
+        print(highlight(six.text_type(data), lexers.JsonLexer(), formatters.TerminalFormatter()))
         # group types by index
         templates = collections.defaultdict(list)
         for name, mapper in loader.mappings.items():
             templates[mapper.template].append(mapper)
 
-        for template, mappers in templates.iteritems():
+        for template, mappers in six.iteritems(templates):
             print("Template " +
                   colored(template.name, attrs=['bold', ]) +
                   " (%s):\n" % template.parse_index_template())
@@ -189,7 +188,7 @@ def diff(path, show_mappings, show_templates):
             else:
                 es_template = es.indices.get_template(name)
                 data = json.dumps(es_template, indent=4)
-                print(highlight(unicode(data, 'UTF-8'),
+                print(highlight(six.text_type(data),
                                 lexers.JsonLexer(),
                                 formatters.TerminalFormatter()))
                 differ = differs.TemplateDiffer(name,
@@ -229,7 +228,7 @@ def sync(path, sync_mappings, sync_templates, skip_confirmation, dry_run):
             templates[mapper.template].append(mapper)
 
         click.echo("Detected templates:")
-        for template, mappers in templates.iteritems():
+        for template, mappers in six.iteritems(templates):
             click.echo("   - %s (%s)" % (template.name, template.parse_index_template()))
             for mapper in mappers:
                 click.echo("      - %s" % (mapper.typename))

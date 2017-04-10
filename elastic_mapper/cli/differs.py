@@ -160,7 +160,7 @@ class MappingIssue(MappingState):
 def normalize_mapping(mapping):
     "Converts all string-like values of a mapping into the same text type"
     normalized = {}
-    for k, v in mapping.iteritems():
+    for k, v in six.iteritems(mapping):
         if isinstance(v, dict):
             normalized[k] = normalize_mapping(v)
         elif isinstance(v, six.string_types):
@@ -241,7 +241,7 @@ class MappingDiffer(object):
     def _gen_mapping_fieldnames(self, mapping, prefix=''):
         fieldnames = []
         new_prefix = (prefix + '.') if prefix else ''
-        for fieldname, attrs in mapping.iteritems():
+        for fieldname, attrs in six.iteritems(mapping):
             if 'properties' in attrs.keys():
                 # nested object
                 nested_fieldnames = self._gen_mapping_fieldnames(attrs['properties'],
@@ -272,7 +272,7 @@ class TimelyIndexDiffer(object):
     def diff(self):
         states = collections.OrderedDict()
         # compute first the conflicts against the local mappers
-        for index_name, type_mappings in self.dest.iteritems():
+        for index_name, type_mappings in six.iteritems(self.dest):
             common_types = set(self.source.keys()) & set(type_mappings.keys())
             # TODO: ignoring missing or extra types here for now
             for typename in common_types:
@@ -290,8 +290,8 @@ class TimelyIndexDiffer(object):
     def _compute_index_conflicts(self):
         """Compute type conflicts among timely indices in ES."""
         index_conflicts = collections.OrderedDict()
-        for i, (index_1, type_mappings_1) in enumerate(self.dest.iteritems()):
-            for j, (index_2, type_mappings_2) in enumerate(self.dest.iteritems()):
+        for i, (index_1, type_mappings_1) in enumerate(six.iteritems(self.dest)):
+            for j, (index_2, type_mappings_2) in enumerate(six.iteritems(self.dest)):
                 # go through all index combinations to check for conflicts (symmetric matrix)
                 if (i != j and j > i):
                     common_types = set(type_mappings_1.keys()) & set(type_mappings_2.keys())
@@ -300,7 +300,7 @@ class TimelyIndexDiffer(object):
                                                      type_mappings_1[typename]['properties'],
                                                      type_mappings_2[typename]['properties'])
                         index_states = index_differ.diff()
-                        for fieldname, states in index_states.iteritems():
+                        for fieldname, states in six.iteritems(index_states):
                             type_conflicts = [state for state in states
                                               if state.state == State.type_conflict]
                             if type_conflicts:
@@ -348,7 +348,7 @@ class TemplateDiffer(object):
 
         # check inconsistent fields (i.e. fields declared with same name and different types)
         # TODO: refactor this mess into something more functional
-        items = self.source.iteritems()
+        items = six.iteritems(self.source)
         for i, (typename1, mapping1) in enumerate(items):
             for j, (typename2, mapping2) in enumerate(items):
                 if typename1 != typename2:
@@ -360,7 +360,7 @@ class TemplateDiffer(object):
                         diff = differ.diff()
                         # mark a conflict if the duplicated fields have different types
                         if all([duplicated_field in diff,
-                               diff[duplicated_field][0].state != State.ok]):
+                                diff[duplicated_field][0].state != State.ok]):
                             state = MappingState(fieldname=duplicated_field,
                                                  state=State.inconsistent_field)
                             # add inconsistence conflict for typename 1
