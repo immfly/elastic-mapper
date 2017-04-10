@@ -46,6 +46,6 @@ def mapper_repr(mapper, indent=1):
 
 def sanitize_identifier(identifier):
     sanitized = identifier.replace('-', '_')
-    sanitized = str(filter(lambda ch: bool(re.match('[a-zA-Z0-9_]', ch)), sanitized))
+    sanitized = ''.join(list((filter(lambda ch: bool(re.match('[a-zA-Z0-9_]', ch)), sanitized))))
     sanitized = sanitized.strip('_ ')
     return sanitized
