@@ -93,7 +93,7 @@ class Mapper(Field):
         if not attrs:
             return ret
 
-        for attr, value in attrs.iteritems():
+        for attr, value in six.iteritems(attrs):
             if not(self._meta.dynamic_fields == '__all__' or attr in self._meta.dynamic_fields):
                 # skip when this attribute is not allowed to be dynamic
                 continue
@@ -136,7 +136,7 @@ class Mapper(Field):
     @classmethod
     def generate_mapping(cls):
         properties = {}
-        for attr_name, field in cls._declared_fields.iteritems():
+        for attr_name, field in six.iteritems(cls._declared_fields):
             properties[attr_name] = field.mapping_data
 
         mapping = {

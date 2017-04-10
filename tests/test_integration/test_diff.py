@@ -2,6 +2,8 @@ import pytest
 import elasticsearch
 import datetime
 
+import six
+
 from elastic_mapper import mappers
 from elastic_mapper import parsers
 from elastic_mapper import templates as elastic_templates
@@ -243,7 +245,7 @@ class TestTimelyMappingDiff(BaseESTest):
                                            TestDateTemplate.index,
                                            all_mappings)
         states = differ.diff()
-        for fieldname, states in states.iteritems():
+        for fieldname, states in six.iteritems(states):
             assert all([state.state == State.ok for state in states])
 
     def test_index_type_conflict_timely_index(self):
