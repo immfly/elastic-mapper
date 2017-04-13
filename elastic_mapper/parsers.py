@@ -2,7 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import six
 import re
-import datetime
+
+import arrow
 
 from elastic_mapper.fields import get_attribute
 
@@ -37,7 +38,7 @@ class IndexParser(object):
 
 class TimeParser(IndexParser):
 
-    def __init__(self, time_field=None, format='%Y%m%d'):
+    def __init__(self, time_field=None, format='YYYYMMDD'):
         self.format = format
         self.time_field = time_field
 
@@ -45,23 +46,24 @@ class TimeParser(IndexParser):
         if self.time_field:
             time = get_attribute(mapper.instance, 'timestamp')
         else:
-            time = datetime.datetime.now()
+            time = arrow.now()
         return index.format(time=self.get_time_string(time))
 
     def get_time_string(self, timestamp):
-        return timestamp.strftime(self.format)
+        v = arrow.get(timestamp)
+        return v.format(self.format)
 
 
 class YearlyParser(TimeParser):
 
     def __init__(self, time_field=None):
-        super(YearlyParser, self).__init__(format='%Y')
+        super(YearlyParser, self).__init__(format='YYYY')
 
 
 class MonthlyParser(TimeParser):
 
     def __init__(self, time_field=None):
-        super(MonthlyParser, self).__init__(format='%Y%m')
+        super(MonthlyParser, self).__init__(format='YYYYMM')
 
 
 class DailyParser(TimeParser):
