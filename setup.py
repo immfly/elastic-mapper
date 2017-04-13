@@ -6,6 +6,7 @@ setup(
     packages=['elastic_mapper'],
     install_requires=[
         'six',
+        'arrow',
     ],
     entry_points={
         'console_scripts': [

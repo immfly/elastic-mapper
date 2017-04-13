@@ -1,7 +1,8 @@
 from __future__ import unicode_literals
+
+import arrow
 import collections
 import six
-import datetime
 
 from elastic_mapper import repr_utils
 
@@ -171,20 +172,22 @@ class DateField(Field):
 
     def __init__(self, **kwargs):
         self.auto_now = kwargs.pop('auto_now', False)
-        self.strftime = kwargs.pop('strftime', '%Y-%m-%dT%H:%M:%S%z')
+        # Arrow datetime format
+        self.strftime = kwargs.pop('strftime', 'YYYY-MM-DDTHH:mm:ss.SSSZ')
         super(DateField, self).__init__(**kwargs)
 
     def get_attribute(self, instance):
         if self.auto_now:
             # user current datetime as default
-            now = datetime.datetime.now()
+            now = arrow.now()
             return now
 
         # obtain datetime from source
         return super(DateField, self).get_attribute(instance)
 
     def to_representation(self, value):
-        return value.strftime(self.strftime)
+        v = arrow.get(value)
+        return v.format(self.strftime)
 
     @property
     def mapping_data(self):
